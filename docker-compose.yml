@@ -1,0 +1,76 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: gunicorn app_manager.wsgi:application -c /app/gunicorn.conf.py
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - logs:/app/logs
+    ports:
+      - "8099:8099"
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SKIP_COLLECTSTATIC=0
+    restart: always
+    depends_on:
+      - redis
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A app_manager worker -l INFO
+    volumes:
+      - .:/app
+      - logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SKIP_COLLECTSTATIC=0
+    restart: always
+    depends_on:
+      - redis
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A app_manager beat -l INFO
+    volumes:
+      - .:/app
+      - logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SKIP_COLLECTSTATIC=0
+    restart: always
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    networks:
+      default:
+        aliases:
+          - redis
+
+volumes:
+  static_volume:
+  media_volume:
+  redis_data:
+  logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/logs
+      o: bind

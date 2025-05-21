@@ -1,0 +1,105 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media
+
+# Entorno virtual
+venv/
+env/
+ENV/
+.env/
+.venv/
+env.bak/
+venv.bak/
+
+# IDE y editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+staticfiles/
+
+# Archivos temporales
+*.bak
+*.tmp
+*.temp
+
+# Archivos de configuración local
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Archivos de caché
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.coverage.*
+
+# Archivos de dependencias
+node_modules/
+
+# Archivos de compilación
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de base de datos
+*.sqlite3
+*.db
+
+# Archivos específicos del proyecto
+check_env.py
+check_env_simple.py
+
+# Archivos de registro
+logs/
+*.log
+
+# Archivos de configuración sensibles (asegúrate de no excluir archivos necesarios)
+# settings.py
+
+# Archivos de migraciones (opcional, dependiendo de tu flujo de trabajo)
+# */migrations/*.py
+# !*/migrations/__init__.py
