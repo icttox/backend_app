@@ -27,6 +27,37 @@ class LoginView(APIView):
     
     def post(self, request):
         email = request.data.get('email')
+        data = request.data
+        
+        # Verificar si es autenticación con proveedor
+        if 'provider' in data and data.get('provider') == 'microsoft':
+            access_token = data.get('access_token')
+            
+            if not email or not access_token:
+                return Response({
+                    'error': 'Se requiere email y access_token para autenticación con Microsoft'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Aquí podrías verificar el token de Microsoft si lo necesitas
+            # ...
+            
+            # Buscar usuario por email
+            try:
+                user = User.objects.get(email=email)
+                refresh = RefreshToken.for_user(user)
+                user_data = UserSerializer(user).data
+                
+                return Response({
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                    'user': user_data,
+                })
+            except User.DoesNotExist:
+                return Response({
+                    'error': 'Usuario no encontrado'
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Autenticación estándar con email y contraseña
         password = request.data.get('password')
         
         if not email or not password:
@@ -39,7 +70,6 @@ class LoginView(APIView):
         if user is not None:
             refresh = RefreshToken.for_user(user)
             user_data = UserSerializer(user).data
-            
             
             return Response({
                 'refresh': str(refresh),

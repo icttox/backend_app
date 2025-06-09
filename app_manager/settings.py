@@ -59,6 +59,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "https://front-apps-managment.vercel.app",
     "https://dashboard.appsgebesa.com",
+    "https://dev-dashboard.appsgebesa.com"
 ]
 
 # Permitir todos los métodos
@@ -146,6 +147,7 @@ INSTALLED_APPS = [
     'apps.cotizador.cache',  # Agregando la aplicación de caché
     'apps.compras',  # Nueva app de compras
     'apps.aip',  # Nueva app de AIP
+    'apps.analytics',  # Nueva app de Analytics
 ]
 
 MIDDLEWARE = [
@@ -201,13 +203,30 @@ DATABASES = {
         'PASSWORD': config('ERP_PORTALGEBESA_DB_PASSWORD'),
         'HOST': config('ERP_PORTALGEBESA_DB_HOST'),
         'PORT': config('ERP_PORTALGEBESA_DB_PORT')
+    },
+    'analytics': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('SUPABASE_DB_NAME'),
+        'USER': config('SUPABASE_DB_USER'),
+        'PASSWORD': config('SUPABASE_DB_PASSWORD'),
+        'HOST': config('SUPABASE_DB_HOST'),
+        'PORT': config('SUPABASE_DB_PORT'),
+        'OPTIONS': {
+            'sslmode': 'require',
+            'options': '-c search_path=analytics,public'
+        }
     }
+}
+
+MIGRATIONS_MODULES = {
+    'analytics': None,
 }
 
 # Database routers
 DATABASE_ROUTERS = [
     'apps.cotizador.routers.ERPRouter',
-    'app_manager.routers.DatabaseRouter'
+    'app_manager.routers.DatabaseRouter',
+    'apps.analytics.routers.AnalyticsRouter',
 ]
 
 # Auth settings
@@ -263,6 +282,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
@@ -532,4 +552,3 @@ LOGGING = {
 
 # Odoo configuration
 ODOO_ENDPOINT = os.environ.get('ODOO_ENDPOINT', 'https://erp.portalgebesa.com/send_request?model=sale.order')
-

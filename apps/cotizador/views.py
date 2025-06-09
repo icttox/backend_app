@@ -74,6 +74,15 @@ class CotizacionViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['folio', 'proyecto', 'cliente']
+    
+    def create(self, request, *args, **kwargs):
+        print("=== DATOS RECIBIDOS AL CREAR COTIZACIÓN ===")
+        print("Headers:", request.headers)
+        print("User:", request.user.email if request.user.is_authenticated else 'No autenticado')
+        print("Data:", request.data)
+        print("Query Params:", request.query_params)
+        print("========================================")
+        return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = Cotizacion.objects.all()
@@ -131,11 +140,32 @@ class CotizacionViewSet(viewsets.ModelViewSet):
             serializer.save()
 
     def perform_create(self, serializer):
-        # Asignar el usuario actual como creador de la cotización si el campo existe
+        # Datos iniciales para guardar
+        save_kwargs = {}
+        user = self.request.user
+        
+        # Si el campo de usuario existe, asignar el usuario creador
         if self.__class__.usuario_fields_exist:
-            serializer.save(usuario_creacion=self.request.user)
-        else:
-            serializer.save()
+            save_kwargs['usuario_creacion'] = user
+        
+        # Obtener el vendedor_id del payload si existe
+        vendedor_id = self.request.data.get('vendedor_id')
+        
+        if vendedor_id:
+            print(f"Vendedor ID recibido del frontend: {vendedor_id}")
+            
+            # Guardar el vendedor_id en el perfil del usuario si no lo tiene
+            if not user.vendedor_id:
+                user.vendedor_id = vendedor_id
+                user.save(update_fields=['vendedor_id'])
+                print(f"Vendedor ID {vendedor_id} guardado en el perfil del usuario {user.email}")
+            
+            # Usar el vendedor_id del payload para la cotización
+            save_kwargs['vendedor_id'] = vendedor_id
+            print(f"Asignando vendedor_id: {vendedor_id} a la cotización")
+        
+        # Guardar la cotización con los parámetros
+        serializer.save(**save_kwargs)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -819,7 +849,8 @@ class KitViewSet(viewsets.ModelViewSet):
                     es_opcional=serializer.validated_data.get('es_opcional', False),
                     producto_id=serializer.validated_data.get('producto_id'),
                     especial=serializer.validated_data.get('especial', False),
-                    padre=serializer.validated_data.get('padre')
+                    padre=serializer.validated_data.get('padre'),
+                    route_id=serializer.validated_data.get('route_id')
                 )
                 
                 # Si tenemos una URL de imagen, guardarla en la tabla CotizadorImagenproducto
@@ -1483,6 +1514,9 @@ class SyncViewSet(viewsets.ViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     @action(detail=False, methods=['post'])
     def create_order(self, request):
+        print("=== INICIO CREATE_ORDER ===")
+        print("Datos recibidos:", request.data)
+
         """
         Endpoint para crear una orden de venta en Odoo.
         
@@ -1572,17 +1606,17 @@ class SyncViewSet(viewsets.ViewSet):
             
             serializer = CreateOrderSerializer(data=request.data)
             if not serializer.is_valid():
-                # Error de validaciu00f3n - mostrar errores detallados
-                print(f"Error de validaciu00f3n: {serializer.errors}")
+                # Error de validación - mostrar errores detallados
+                print(f"Error de validación: {serializer.errors}")
 
-                # Crear mensajes de error mu00e1s descriptivos
+                # Crear mensajes de error más descriptivos
                 error_messages = {}
                 error_detail = ""
 
                 for field, errors in serializer.errors.items():
                     if field == 'client_order_ref':
-                        error_messages[field] = ['El campo Folio de Cotizaciu00f3n es obligatorio. Por favor, complu00e9telo.']
-                        error_detail += "El campo Folio de Cotizaciu00f3n es obligatorio. "
+                        error_messages[field] = ['El campo Folio de Cotización es obligatorio. Por favor, complételo.']
+                        error_detail += "El campo Folio de Cotización es obligatorio. "
                     else:
                         error_messages[field] = errors
                         # Convertir todos los elementos de la lista de errores a strings antes de unirlos
@@ -1591,7 +1625,7 @@ class SyncViewSet(viewsets.ViewSet):
                 
                 return Response({
                     'status': 'error',
-                    'message': 'Algunos campos requeridos estu00e1n vacu00edos o contienen datos invu00e1lidos revisa los campos de la cotizaciu00f3n (Folio de Cotizaciu00f3n)',
+                    'message': f'Error al crear el presupuesto {error_detail.strip()}',
                     'errors': error_messages,
                     'detail': error_detail.strip()
                 }, status=status.HTTP_400_BAD_REQUEST)
@@ -1646,6 +1680,27 @@ class SyncViewSet(viewsets.ViewSet):
             print(f"ODOO DATA: {json.dumps(odoo_data, indent=4, cls=DecimalEncoder)}")
 
             
+            # Obtener el vendedor_id del usuario actual si está disponible
+            vendedor_id = request.data.get('vendedor_id')
+            if not vendedor_id:
+                print(f"No se encontró vendedor_id en el payload")
+                vendedor_id = None
+            if not vendedor_id and hasattr(request.user, 'vendedor_id') and request.user.vendedor_id:
+                try:
+                    vendedor_id = int(request.user.vendedor_id)
+                    print(f"Usando vendedor_id del usuario: {vendedor_id}")
+                except (ValueError, TypeError) as e:
+                    print(f"Error al convertir vendedor_id a entero: {e}")
+            
+            # Si no se pudo obtener el vendedor_id del usuario, usar el que viene en los datos
+            if not vendedor_id and 'user_id' in odoo_data:
+                vendedor_id = odoo_data['user_id']
+                print(f"Usando user_id de odoo_data: {vendedor_id}")
+
+            if vendedor_id is not None:
+                odoo_data['user_id'] = vendedor_id
+                print(f"Usando vendedor_id FINAL: {vendedor_id}")
+            
             # Preparar el payload final para Odoo
             payload = {
                 "fields": ["name", "partner_id", "client_order_ref", "priority", "order_line", "manufacture", "warehouse_id", "note", "user_id"],
@@ -1658,6 +1713,7 @@ class SyncViewSet(viewsets.ViewSet):
                 payload_json = json.dumps(payload, cls=DecimalEncoder)
                 # Un solo log con la información esencial para depuración
                 print('\nPAYLOAD PREPARADO PARA ODOO')
+                print(payload_json)
             except Exception as e:
                 print(f"Error al preparar los datos para Odoo: {str(e)}")
                 return Response({'status': 'error', 'message': 'Error al preparar los datos para Odoo', 'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1872,6 +1928,15 @@ class SyncViewSet(viewsets.ViewSet):
             if not user_api:
                 # Si no tiene user_api, devolver lista vacía sin consultar la API
                 print(f"Usuario {request.user.username} no tiene user_api configurado. No se consultará la API.")
+                debug_info = {
+                    'tiene_unidad': hasattr(request.user, 'unidad') and request.user.unidad is not None,
+                    'unidad_nombre': getattr(request.user.unidad, 'nombre', 'No disponible') if hasattr(request.user, 'unidad') and request.user.unidad else 'No tiene unidad',
+                    'username': request.user.username,
+                    'error': 'No tiene user_api configurado'
+                }
+                print(f"Usuario {request.user.username} no tiene user_api configurado. No se consultará la API.")
+                print(f"Debug info: {debug_info}")
+                # Devolvemos un array vacío para mantener compatibilidad con el frontend
                 return Response([], status=status.HTTP_200_OK)
             
             params = {

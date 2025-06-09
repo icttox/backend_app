@@ -104,7 +104,7 @@ class CustomUserCreationForm(forms.ModelForm):
 
 class CustomUserAdmin(UserAdmin):
     inlines = (UserProfileInline,)
-    list_display = ('email', 'first_name', 'last_name', 'is_staff', 'get_groups', 'get_unidades', 'get_categorias_compras')
+    list_display = ('email', 'first_name', 'last_name', 'is_staff', 'hubspot_id', 'get_groups', 'get_unidades', 'get_categorias_compras')
     ordering = ('email',)
     add_form = CustomUserCreationForm
     
@@ -114,7 +114,7 @@ class CustomUserAdmin(UserAdmin):
             (None, {'fields': ('email', 'password')}),
             (_('Información Personal'), {'fields': ('first_name', 'last_name', 'phone')}),
             (_('Información Organizacional'), {
-                'fields': ('area', 'unidad'),
+                'fields': ('area','unidad','hubspot_id'),
                 'description': 'El área determina qué secciones adicionales estarán disponibles en el perfil del usuario'
             }),
             (_('Permisos'), {

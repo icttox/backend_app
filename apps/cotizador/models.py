@@ -211,7 +211,7 @@ class Cotizacion(models.Model):
     email_vendedor = models.EmailField(blank=True, default='')
     telefono_vendedor = models.CharField(max_length=20, blank=True, default='')
     proyectista = models.CharField(max_length=255, blank=True, default='')
-    unidad_facturacion = models.CharField(max_length=50, blank=True, default='')
+    unidad_facturacion = models.CharField(max_length=100, blank=True, default='')
     usuario_id = models.CharField(max_length=50, blank=True, default='')
     usuario_email = models.EmailField(blank=True, default='')
     estatus = models.CharField(max_length=20, choices=ESTATUS_CHOICES, default='borrador')
@@ -391,32 +391,25 @@ class Kit(models.Model):
         return nuevo_kit
 
 class KitProducto(models.Model):
-    """Modelo que representa la relación entre un Kit y un producto.
-    Almacena la información necesaria para calcular precios y cantidades.
-    """
     id = models.AutoField(primary_key=True)
     kit = models.ForeignKey(Kit, on_delete=models.CASCADE, related_name='productos')
-    clave = models.CharField(max_length=50, db_index=True)  
+    clave = models.CharField(max_length=255, db_index=True)  # Aumentado de 50 a 255 para permitir nombres largos
     cantidad = models.IntegerField(default=1)
-    porcentaje_descuento = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    precio_lista = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    costo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    precio_descuento = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    importe = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    
-    # Campo adicional para ordenar productos dentro del kit
+    porcentaje_descuento = models.DecimalField(max_digits=18, decimal_places=6, default=0) 
+    precio_lista = models.DecimalField(max_digits=18, decimal_places=6, default=0)
+    costo = models.DecimalField(max_digits=18, decimal_places=6, default=0)
+    precio_descuento = models.DecimalField(max_digits=18, decimal_places=6, default=0)
+    importe = models.DecimalField(max_digits=18, decimal_places=6, default=0)
     orden = models.IntegerField(default=0)
-    
-    # Nuevos campos
     descripcion = models.CharField(max_length=255, blank=True, null=True)
     linea = models.CharField(max_length=100, blank=True, null=True)
     familia = models.CharField(max_length=100, blank=True, null=True)
     grupo = models.CharField(max_length=100, blank=True, null=True)
-    tag = models.CharField(max_length=100, blank=True, null=True)  # Campo para almacenar etiquetas
+    tag = models.CharField(max_length=100, blank=True, null=True)
     mostrar_en_kit = models.BooleanField(default=True)
     es_opcional = models.BooleanField(default=False)
-    especial = models.BooleanField(default=False)  # Indica si es un producto especial
-    padre = models.BooleanField(null=True, blank=True)  # Indica si es un producto padre, se establece según lo que envíe el usuario
+    especial = models.BooleanField(default=False)
+    padre = models.BooleanField(null=True, blank=True)
     producto_id = models.IntegerField(blank=True, null=True)
     route_id = models.IntegerField(blank=True, null=True)
 
@@ -495,7 +488,7 @@ class ProductoCotizacion(models.Model):
     es_kit = models.BooleanField(default=False)
     especial = models.BooleanField(default=False)
     padre = models.BooleanField(default=False)
-    clave = models.CharField(max_length=50, blank=True, null=True)
+    clave = models.CharField(max_length=255, blank=True, null=True)  # Aumentado de 50 a 255 para permitir nombres largos
     descripcion = models.TextField(blank=True, null=True)  # Cambiado de CharField a TextField para permitir descripciones largas
     imagen_url = models.URLField(max_length=2048, blank=True, null=True)
     linea = models.CharField(max_length=100, blank=True, null=True)

@@ -93,7 +93,8 @@ class UserSerializer(serializers.ModelSerializer):
             'groups',
             'group_ids',
             'profile', 
-            'date_joined'
+            'date_joined',
+            'vendedor_id'
         )
         read_only_fields = ('date_joined', 'is_active')
 

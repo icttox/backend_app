@@ -38,12 +38,11 @@ USER_CREDENTIAL_CONFIG_MAP = {
         "ODOO_PASSWORD_EDUARDO",
         "ODOO_API_KEY_EDUARDO"
     ),
-    # Add Miguel's entry here once credentials are known, e.g.:
-    # "miguel.valenzuela@gebesa.com": (
-    #     "miguel.valenzuela@gebesa.com",
-    #     "ODOO_PASSWORD_MIGUEL",
-    #     "ODOO_API_KEY_MIGUEL"
-    # ),
+    "miguel.valenzuela@gebesa.com": (
+        "miguel.valenzuela@gebesa.com",
+        "ODOO_PASSWORD_MIGUEL",
+        "ODOO_API_KEY_MIGUEL"
+    ),
 }
 
 def normalize_string(s):

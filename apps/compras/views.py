@@ -736,11 +736,13 @@ class PropuestaCompraViewSet(viewsets.ModelViewSet):
             logger.warning(f"Error al obtener el nombre del comprador: {str(e)}")
             comprador_nombre = 'C'  # Valor por defecto si hay error
         
-        # Construir el partner_ref con la primera letra del nombre del comprador + id de la propuesta + guion + partner_id
+        # Obtener la primera letra del nombre del comprador para usarla en el partner_ref
         primera_letra = comprador_nombre[0].upper() if comprador_nombre else 'C'
-        partner_ref = request.data.get('partner_ref', f"{primera_letra}{propuesta.id}-{partner_id}")
+        # El partner_ref se construiru00e1 dentro del bucle para cada proveedor
+        partner_ref_from_request = request.data.get('partner_ref')
         
-        date_order = request.data.get('date_order', timezone.now().strftime('%Y-%m-%d'))
+        # Usar la fecha actual + 1 día para compensar el problema de zona horaria en Odoo
+        date_order = (timezone.now() + timedelta(days=1)).strftime('%Y-%m-%d')
         picking_type_id = request.data.get('picking_type_id', 7)
         
         # Siempre usar el odoo_user_id del perfil del comprador, ignorando el user_id del payload
@@ -799,7 +801,15 @@ class PropuestaCompraViewSet(viewsets.ModelViewSet):
         
         # Crear una orden de compra por cada proveedor
         for proveedor_id, items_proveedor in items_por_proveedor.items():
-            # Preparar las lu00edneas de la orden
+            # Construir el partner_ref para este proveedor específico
+            if partner_ref_from_request:
+                partner_ref = partner_ref_from_request
+                logger.info(f"Usando partner_ref del request: {partner_ref}")
+            else:
+                # Construir un partner_ref u00fanico para este proveedor
+                partner_ref = f"{primera_letra}{propuesta.id}-{proveedor_id}"
+                logger.info(f"Generando partner_ref para proveedor {proveedor_id}: {partner_ref}") 
+                        # Preparar las lu00edneas de la orden
             order_lines = []
             for item in items_proveedor:
                 # Obtener el ID del producto en Odoo del item o del mapeo
@@ -834,13 +844,14 @@ class PropuestaCompraViewSet(viewsets.ModelViewSet):
                         "product_uom": product_uom,  # Usar la unidad de medida del item
                         "product_qty": float(item.cantidad_propuesta),
                         "price_unit": float(item.costo),
-                        "date_planned": date_planned
+                        "date_planned": date_planned,
+                        "taxes_id": [(6, 0, [12])]
                     }
                 ]
                 order_lines.append(order_line)
             
             # Obtener el currency_id de los items (usar el primero que encontremos, o 3 por defecto)
-            item_currency_id = 3  # Default: MXN
+            item_currency_id = 34  # Default: MXN
             for item in items_proveedor:
                 if item.currency_id is not None:
                     item_currency_id = item.currency_id
@@ -1262,13 +1273,13 @@ class ItemPropuestaCompraViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['POST'])
     def update_proveedores(self, request):
         """
-        Actualiza los proveedores de múltiples items en una sola operación
+        Actualiza los proveedores y monedas de múltiples items en una sola operación
         
         Ejemplo de payload:
         {
             "items": [
-                {"id": 1, "proveedor_id": 123},
-                {"id": 2, "proveedor_id": 456}
+                {"id": 1, "proveedor_id": 123, "currency_id": 1},
+                {"id": 2, "proveedor_id": 456, "currency_id": 2}
             ]
         }
         """
@@ -1284,6 +1295,7 @@ class ItemPropuestaCompraViewSet(viewsets.ModelViewSet):
         for item_data in items_data:
             item_id = item_data.get('id')
             proveedor_id = item_data.get('proveedor_id')
+            currency_id = item_data.get('currency_id')
             
             if not item_id or proveedor_id is None:
                 results.append({
@@ -1295,15 +1307,29 @@ class ItemPropuestaCompraViewSet(viewsets.ModelViewSet):
                 
             try:
                 item = ItemPropuestaCompra.objects.get(pk=item_id)
-                # Permitimos actualizar el proveedor independientemente del estado de la propuesta
+                # Permitimos actualizar el proveedor y moneda independientemente del estado de la propuesta
                 item.proveedor_id = proveedor_id
-                item.save(update_fields=['proveedor_id', 'fecha_actualizacion'])
                 
-                results.append({
+                # Lista de campos a actualizar
+                update_fields = ['proveedor_id', 'fecha_actualizacion']
+                
+                # Actualizar currency_id si se proporcionó en la solicitud
+                if currency_id is not None:
+                    item.currency_id = currency_id
+                    update_fields.append('currency_id')
+                    
+                item.save(update_fields=update_fields)
+                
+                result = {
                     'id': item_id,
                     'status': 'success',
                     'proveedor_id': proveedor_id
-                })
+                }
+                
+                if currency_id is not None:
+                    result['currency_id'] = currency_id
+                    
+                results.append(result)
             except ItemPropuestaCompra.DoesNotExist:
                 results.append({
                     'id': item_id,

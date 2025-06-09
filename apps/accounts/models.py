@@ -231,6 +231,22 @@ class User(AbstractUser):
         verbose_name='Unidad',
         help_text='Unidad a la que pertenece el usuario'
     )
+    # app de "DATOS"
+    hubspot_id = models.CharField(
+        'Owner Id de HubSpot',
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text='Owner Id de HubSpot del usuario'
+    )
+
+    vendedor_id = models.CharField(
+        'ID del vendedor en Odoo',
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text='ID del vendedor'
+    )
 
     objects = UserManager()
 

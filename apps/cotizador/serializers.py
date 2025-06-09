@@ -125,7 +125,7 @@ class ClienteInfoSerializer(serializers.Serializer):
     cliente = serializers.CharField()
     persona_contacto = serializers.CharField()
     email_cliente = serializers.EmailField()
-    telefono_cliente = serializers.CharField()
+    telefono_cliente = serializers.CharField() 
 
 class VendedorInfoSerializer(serializers.Serializer):
     vendedor = serializers.CharField()
@@ -326,7 +326,7 @@ class KitProductoSerializer(serializers.ModelSerializer):
             'precio_lista', 'costo', 'precio_descuento', 'importe',
             'orden', 'producto_nombre', 'producto_imagen',
             'descripcion', 'linea', 'familia', 'grupo', 'tag', 'producto_id',
-            'especial', 'padre', 'mostrar_en_kit', 'es_opcional'
+            'especial', 'padre', 'mostrar_en_kit', 'es_opcional', 'route_id'
         ]
     
     def get_producto_nombre(self, obj):
@@ -343,7 +343,7 @@ class KitProductoCreateUpdateSerializer(serializers.ModelSerializer):
         model = KitProducto
         fields = [
             'orden','clave', 'cantidad', 'porcentaje_descuento',
-            'precio_lista', 'costo', 'importe','descripcion', 'linea', 'familia', 'grupo', 'tag', 'mostrar_en_kit','es_opcional', 'producto_id', 'producto_imagen', 'especial', 'padre'
+            'precio_lista', 'costo', 'importe','descripcion', 'linea', 'familia', 'grupo', 'tag', 'mostrar_en_kit','es_opcional', 'producto_id', 'producto_imagen', 'especial', 'padre', 'route_id'
         ]
         read_only_fields = ['precio_descuento', 'importe']
 
@@ -523,7 +523,7 @@ class CreateOrderSerializer(serializers.Serializer):
     Serializer para crear órdenes en Odoo.
     """
     partner_id = serializers.IntegerField(required=True)
-    client_order_ref = serializers.CharField(required=True)
+    client_order_ref = serializers.CharField(required=True, allow_blank=False, error_messages={'blank': 'El campo Folio de Cotización es obligatorio. Por favor, complételo.', 'required': 'El campo Folio de Cotización es obligatorio. Por favor, complételo.'})
     priority = serializers.CharField(required=False, default="replenishment")
     manufacture = serializers.CharField(required=False, default="replenishment")
     warehouse_id = serializers.IntegerField(required=False, allow_null=True)  # Agregar campo warehouse
@@ -537,15 +537,12 @@ class CreateOrderSerializer(serializers.Serializer):
     )
     
     def validate_products(self, value):
-        """
-        Valida que haya al menos un producto en la lista.
-        """
         if not value:
             raise serializers.ValidationError("Debe proporcionar al menos un producto")
         return value
+
     
     def to_odoo_format(self, validated_data=None):
-        """Convertir los datos validados al formato que espera Odoo"""
         # Si no se proporciona validated_data, usar self.validated_data
         data = validated_data if validated_data is not None else self.validated_data
         
@@ -555,6 +552,7 @@ class CreateOrderSerializer(serializers.Serializer):
         # Convertir la lista de productos al formato que espera Odoo [0, 0, {...}]
         order_line = []
         for product in products:
+            print(f"Procesando producto - ID: {product.get('product_id')}, route_id: {product.get('route_id')}")
             line = [0, 0, {
                 'product_id': product['product_id'],
                 'product_uom_qty': product['product_uom_qty'],
